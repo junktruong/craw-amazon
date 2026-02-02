@@ -25,10 +25,23 @@ function renderTable(items) {
 
     const bullets = (p.bullets || []).slice(0, 6).join(" • ");
     const images = (p.images || []).slice(0, 6).join("\n");
+    const scores = p.eval?.scores || {};
+    const scoreValues = [
+      scores.demand,
+      scores.competition,
+      scores.margin,
+      scores.differentiation,
+      scores.risk
+    ];
+    const scoreLine = scoreValues.every((v) => v == null)
+      ? ""
+      : scoreValues.map((v) => (v ?? "")).join("/");
 
     tr.innerHTML = `
       <td>${idx + 1}</td>
       <td>${p.score ?? ""}</td>
+      <td>${escapeHtml(p.verdict || p.eval?.verdict || "")}</td>
+      <td>${escapeHtml(scoreLine)}</td>
       <td>${escapeHtml(p.asin || "")}</td>
       <td><pre>${escapeHtml(p.title || "")}</pre></td>
       <td>${p.priceText ? escapeHtml(p.priceText) : ""}</td>
@@ -52,7 +65,13 @@ function escapeHtml(s) {
 
 function toTSV(items) {
   const headers = [
-    "score",
+    "total_score",
+    "verdict",
+    "demand",
+    "competition",
+    "margin",
+    "differentiation",
+    "risk",
     "asin",
     "title",
     "bullet1",
@@ -76,8 +95,15 @@ function toTSV(items) {
   for (const p of items) {
     const bullets = (p.bullets || []);
     const images = (p.images || []);
+    const scores = p.eval?.scores || {};
     const row = [
       p.score ?? "",
+      p.verdict ?? p.eval?.verdict ?? "",
+      scores.demand ?? "",
+      scores.competition ?? "",
+      scores.margin ?? "",
+      scores.differentiation ?? "",
+      scores.risk ?? "",
       p.asin ?? "",
       cleanCell(p.title),
       cleanCell(bullets[0]),
@@ -112,7 +138,7 @@ async function loadSavedConfig() {
     $("minPrice").value = cfg.cfg.minPrice ?? 15;
     $("maxPages").value = cfg.cfg.maxPages ?? 3;
     $("fetchLimit").value = cfg.cfg.fetchLimit ?? 30;
-    $("concurrency").value = cfg.cfg.concurrency ?? 2;
+    $("concurrency").value = cfg.cfg.concurrency ?? 5;
   }
 }
 
@@ -123,7 +149,7 @@ async function saveConfig() {
     minPrice: Number($("minPrice").value || 0),
     maxPages: Number($("maxPages").value || 3),
     fetchLimit: Number($("fetchLimit").value || 30),
-    concurrency: Number($("concurrency").value || 2),
+    concurrency: Number($("concurrency").value || 5),
   };
   await chrome.storage.local.set({ cfg });
   return cfg;

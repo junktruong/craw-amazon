@@ -61,6 +61,21 @@ function parsePriceText(card) {
   return t || "";
 }
 
+const TSHIRT_REGEX = /(t[-\s]?shirt|tshirt|tee)\b/i;
+const EXCLUDE_REGEX = /(hoodie|sweatshirt|tank\s*top|long\s*sleeve|pullover|crewneck|sweater|raglan|jersey|mug|poster|sticker|phone\s*case)\b/i;
+
+function isTshirtCandidate(title, cardText) {
+  const combined = normalizeWhitespace(`${title || ""} ${cardText || ""}`);
+  if (EXCLUDE_REGEX.test(combined)) {
+    return { isMatch: false, confidence: 0 };
+  }
+  if (!TSHIRT_REGEX.test(combined)) {
+    return { isMatch: false, confidence: 0 };
+  }
+  const titleMatch = TSHIRT_REGEX.test(title || "");
+  return { isMatch: true, confidence: titleMatch ? 1 : 0.7 };
+}
+
 function detectBadges(card) {
   const badgeText = (card.textContent || "").toLowerCase();
   return {
@@ -160,7 +175,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       // Nếu bị bot check/captcha
       const bodyText = (document.body?.innerText || "").toLowerCase();
       if (bodyText.includes("robot check") || bodyText.includes("enter the characters you see below")) {
-        sendResponse({ ok: false, error: "Blocked / CAPTCHA detected on search page" });
+        sendResponse({ ok: false, status: "blocked", error: "Blocked / CAPTCHA detected on search page" });
         return;
       }
 
@@ -180,6 +195,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             "a.a-link-normal span"
           ])
         );
+        const cardText = normalizeWhitespace(card.textContent || "");
+        const tshirtCheck = isTshirtCandidate(title, cardText);
+        if (!tshirtCheck.isMatch) continue;
 
         const priceText = parsePriceText(card);
         const rating = parseRating(card);
@@ -193,6 +211,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           priceText,
           rating,
           reviewsCount,
+          productKind: "tshirt",
+          kindConfidence: tshirtCheck.confidence,
           ...badges
         });
       }

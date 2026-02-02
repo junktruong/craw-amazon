@@ -100,6 +100,111 @@ function scrapeRatingAndReviews() {
   return { rating, reviewsCount };
 }
 
+const TSHIRT_REGEX = /(t[-\s]?shirt|tshirt|tee)\b/i;
+const EXCLUDE_REGEX = /(hoodie|sweatshirt|tank\s*top|long\s*sleeve|pullover|crewneck|sweater|raglan|jersey|mug|poster|sticker|phone\s*case)\b/i;
+
+function scrapeBreadcrumbs() {
+  const items = Array.from(
+    document.querySelectorAll("#wayfinding-breadcrumbs_container ul li a, #wayfinding-breadcrumbs_container ul li span.a-list-item")
+  ).map((el) => text(el));
+  return normalizeWhitespace(items.filter(Boolean).join(" > "));
+}
+
+function scrapeDetailFields() {
+  const details = {};
+
+  const bulletRows = Array.from(document.querySelectorAll("#detailBullets_feature_div li"));
+  for (const row of bulletRows) {
+    const raw = normalizeWhitespace(row.textContent || "");
+    if (!raw.includes(":")) continue;
+    const parts = raw.split(":");
+    const key = normalizeWhitespace(parts.shift());
+    const value = normalizeWhitespace(parts.join(":"));
+    if (key && value) details[key] = value;
+  }
+
+  const tableRows = Array.from(
+    document.querySelectorAll(
+      "#productDetails_detailBullets_sections1 tr, #productDetails_techSpec_section_1 tr, #productDetails_techSpec_section_2 tr"
+    )
+  );
+  for (const row of tableRows) {
+    const key = normalizeWhitespace(text(row.querySelector("th")));
+    const value = normalizeWhitespace(text(row.querySelector("td")));
+    if (key && value) details[key] = value;
+  }
+
+  return details;
+}
+
+function scrapeJsonLd() {
+  const out = { categories: [], itemTypes: [] };
+  const scripts = Array.from(document.querySelectorAll("script[type='application/ld+json']"));
+  for (const script of scripts) {
+    const raw = script.textContent || "";
+    if (!raw.trim()) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      const nodes = Array.isArray(parsed) ? parsed : [parsed];
+      for (const node of nodes) {
+        if (!node || typeof node !== "object") continue;
+        if (node["@type"] === "Product") {
+          if (node.category) out.categories.push(normalizeWhitespace(String(node.category)));
+          if (node.itemCategory) out.categories.push(normalizeWhitespace(String(node.itemCategory)));
+          if (node.itemType) out.itemTypes.push(normalizeWhitespace(String(node.itemType)));
+        }
+        if (node["@type"] === "BreadcrumbList" && Array.isArray(node.itemListElement)) {
+          const crumbs = node.itemListElement
+            .map((el) => normalizeWhitespace(el?.name || ""))
+            .filter(Boolean)
+            .join(" > ");
+          if (crumbs) out.categories.push(crumbs);
+        }
+      }
+    } catch {
+      // ignore invalid JSON-LD
+    }
+  }
+  return out;
+}
+
+function findDetailValue(details, pattern) {
+  for (const [key, value] of Object.entries(details)) {
+    if (pattern.test(key)) return value;
+  }
+  return "";
+}
+
+function extractItemTypeKeywords(details) {
+  const raw = findDetailValue(details, /item\s*type\s*keyword/i) || findDetailValue(details, /item_type_keyword/i);
+  if (!raw) return [];
+  return raw
+    .split(/[,|]/)
+    .map((s) => normalizeWhitespace(s))
+    .filter(Boolean);
+}
+
+function verifyIsTshirt(signals) {
+  const blob = normalizeWhitespace(
+    [
+      signals.title,
+      (signals.bullets || []).join(" "),
+      signals.description,
+      signals.department,
+      signals.categoryText,
+      (signals.itemTypeKeywords || []).join(" ")
+    ].join(" ")
+  );
+
+  if (EXCLUDE_REGEX.test(blob)) {
+    return { isTshirt: false, confidence: 0.9, productKind: "other" };
+  }
+  if (TSHIRT_REGEX.test(blob)) {
+    return { isTshirt: true, confidence: 0.85, productKind: "tshirt" };
+  }
+  return { isTshirt: false, confidence: 0.4, productKind: "unknown" };
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   (async () => {
     try {
@@ -117,11 +222,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const images = scrapeImages();
       const priceText = scrapePriceText();
       const { rating, reviewsCount } = scrapeRatingAndReviews();
+      const detailFields = scrapeDetailFields();
+      const department = findDetailValue(detailFields, /department/i);
+      const itemTypeKeywords = extractItemTypeKeywords(detailFields);
+      const breadcrumbText = scrapeBreadcrumbs();
+      const jsonLd = scrapeJsonLd();
+      const categoryText = normalizeWhitespace(
+        [breadcrumbText, ...jsonLd.categories].filter(Boolean).join(" > ")
+      );
+      const combinedItemTypes = [...itemTypeKeywords, ...jsonLd.itemTypes].filter(Boolean);
+
+      const tshirtCheck = verifyIsTshirt({
+        title,
+        bullets,
+        description,
+        department,
+        categoryText,
+        itemTypeKeywords: combinedItemTypes
+      });
 
       // Basic bot-check detection
       const pageText = (document.body?.innerText || "").toLowerCase();
       if (pageText.includes("enter the characters you see below") || pageText.includes("robot check")) {
-        sendResponse({ ok: false, error: "Blocked / CAPTCHA detected on product page" });
+        sendResponse({ ok: false, status: "blocked", error: "Blocked / CAPTCHA detected on product page" });
         return;
       }
 
@@ -134,7 +257,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           images,
           priceText,
           rating,
-          reviewsCount
+          reviewsCount,
+          department,
+          categoryText,
+          itemTypeKeywords: combinedItemTypes,
+          isTshirt: tshirtCheck.isTshirt,
+          tshirtConfidence: tshirtCheck.confidence,
+          productKind: tshirtCheck.productKind
         }
       });
     } catch (e) {
