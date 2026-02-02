@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trend Scout</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Amazon Trend Scout</h1>
+      <div class="hint">
+        Nhập chủ đề → Search → Fetch details → Copy TSV dán vào Google Sheet
+      </div>
+    </header>
+
+    <section class="controls">
+      <label>
+        Chủ đề (keyword)
+        <input id="keyword" placeholder="ví dụ: funny valentine shirt" />
+      </label>
+
+      <div class="row">
+        <label>
+          Khoảng thời gian (days, dùng để ưu tiên “mới nổi”)
+          <input id="days" type="number" min="1" value="14" />
+        </label>
+
+        <label>
+          Giá tối thiểu (USD)
+          <input id="minPrice" type="number" min="0" value="15" step="0.01" />
+        </label>
+      </div>
+
+      <div class="row">
+        <label>
+          Max pages (search)
+          <input id="maxPages" type="number" min="1" value="3" />
+        </label>
+
+        <label>
+          Fetch limit (products)
+          <input id="fetchLimit" type="number" min="1" value="30" />
+        </label>
+
+        <label>
+          Concurrency
+          <input id="concurrency" type="number" min="1" value="2" />
+        </label>
+      </div>
+
+      <div class="buttons">
+        <button id="btnSearch">Search</button>
+        <button id="btnFetch">Fetch details</button>
+        <button id="btnCopy">Copy TSV</button>
+        <button id="btnClear" class="secondary">Clear</button>
+      </div>
+
+      <div id="status" class="status">Idle</div>
+    </section>
+
+    <section class="tableWrap">
+      <table id="results">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Score</th>
+            <th>ASIN</th>
+            <th>Title</th>
+            <th>Price</th>
+            <th>Rating</th>
+            <th>Reviews</th>
+            <th>Bullets</th>
+            <th>Description</th>
+            <th>Images</th>
+            <th>URL</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </section>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

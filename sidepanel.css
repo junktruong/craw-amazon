@@ -1,0 +1,121 @@
+:root {
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-size: 12px;
+}
+
+body {
+  margin: 0;
+  padding: 12px;
+  background: #0b0f14;
+  color: #e6edf3;
+}
+
+header h1 {
+  font-size: 16px;
+  margin: 0 0 6px 0;
+}
+
+.hint {
+  opacity: 0.8;
+  margin-bottom: 12px;
+}
+
+.controls {
+  background: #111826;
+  border: 1px solid #233047;
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #2b3b57;
+  background: #0b1220;
+  color: #e6edf3;
+  outline: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+button {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #2b3b57;
+  background: #1f6feb;
+  color: white;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #0b1220;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-top: 8px;
+  opacity: 0.85;
+  white-space: pre-wrap;
+}
+
+.tableWrap {
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid #233047;
+}
+
+table {
+  width: 1200px;
+  border-collapse: collapse;
+  background: #0b1220;
+}
+
+th, td {
+  border-bottom: 1px solid #1c2740;
+  padding: 8px;
+  vertical-align: top;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: #0f1a2e;
+  z-index: 1;
+}
+
+td a {
+  color: #7db7ff;
+  text-decoration: none;
+}
+
+.small {
+  opacity: 0.85;
+  font-size: 11px;
+}
+
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

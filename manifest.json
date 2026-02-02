@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Amazon Trend Scout Side Panel",
+  "version": "0.1.1",
+  "description": "Side panel: search Amazon, scrape products & details, score, copy TSV to Google Sheets.",
+  "action": { "default_title": "Trend Scout" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "permissions": ["sidePanel", "tabs", "scripting", "storage", "clipboardWrite"],
+  "host_permissions": ["https://www.amazon.com/*"],
+  "background": { "service_worker": "service_worker.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.amazon.com/s*"],
+      "js": ["core/normalize.js", "content_scripts/search_scraper.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.amazon.com/dp/*", "https://www.amazon.com/*/dp/*"],
+      "js": ["core/normalize.js", "content_scripts/product_scraper.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
